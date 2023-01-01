@@ -1,5 +1,9 @@
+
+
+
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 require('dotenv').config();
@@ -8,6 +12,7 @@ const app = express();
 //middelware
 app.use(cors());
 app.use(express.json());
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.bu53v7d.mongodb.net/?retryWrites=true&w=majority`;
@@ -35,19 +40,44 @@ async function run() {
                 return res.send({ acknowledged: false, message })
             }
             console.log(user);
-            const result = await usersCollection.insertOne(user);
+            const salt = await bcrypt.genSalt();
+            const passwordHash = await bcrypt.hash(user.password, salt);
+            const newUser = {
+                username: user.username,
+                email: user.email,
+                password: passwordHash,
+            }
+            const result = await usersCollection.insertOne(newUser);
             res.send(result);
         })
-        app.get('/users/:email', async (req, res) => {
-            const email = req.params.email;
+        app.post('/user', async (req, res) => {
+            const { email, password } = req.body
+            // const email = req.params.email;
             const query = { email: email }
             const user = await usersCollection.findOne(query);
             if (!user) {
                 const message = "Wrong Email/Password";
                 return res.send({ acknowledged: false, message })
             }
-            res.send(user);
+            const isMatch = await bcrypt.compare(password, user.password);
+            console.log(isMatch);
+            if (!isMatch) {
+                const message2 = "Invalid credentials";
+                return res.send({ acknowledged: false, message2 })
+            }
+
+            res.send({ acknowledged: true, success: "User found" })
         })
+
+        //  const login = async (req, res) => {
+        //     try {
+        //         const { email, password } = req.body;
+        //         const user = await usersCollection.findOne({ email: email })
+        //     }
+        //     catch (err) {
+        //         res.status(500).json({ error: err.message });
+        //     }
+        // }
 
     }
     finally {
