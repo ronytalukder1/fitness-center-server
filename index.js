@@ -1,6 +1,3 @@
-
-
-
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
@@ -25,6 +22,7 @@ async function run() {
 
         const usersCollection = client.db('creativeitDemo').collection('userCollection');
 
+        //Register and  Storing user data with validation
         app.post('/users', async (req, res) => {
             const user = req.body
             const userQuery = { email: req.body.email }
@@ -40,8 +38,12 @@ async function run() {
                 return res.send({ acknowledged: false, message })
             }
             console.log(user);
+
+            //password encryption
             const salt = await bcrypt.genSalt();
             const passwordHash = await bcrypt.hash(user.password, salt);
+
+
             const newUser = {
                 username: user.username,
                 email: user.email,
@@ -50,15 +52,18 @@ async function run() {
             const result = await usersCollection.insertOne(newUser);
             res.send(result);
         })
+
+        // Loging IN and compare hash password with the password with validation
         app.post('/user', async (req, res) => {
             const { email, password } = req.body
-            // const email = req.params.email;
             const query = { email: email }
             const user = await usersCollection.findOne(query);
             if (!user) {
                 const message = "Wrong Email/Password";
                 return res.send({ acknowledged: false, message })
             }
+
+            //Compare passwords
             const isMatch = await bcrypt.compare(password, user.password);
             console.log(isMatch);
             if (!isMatch) {
@@ -69,16 +74,13 @@ async function run() {
             res.send({ acknowledged: true, success: "User found" })
         })
 
-        //  const login = async (req, res) => {
-        //     try {
-        //         const { email, password } = req.body;
-        //         const user = await usersCollection.findOne({ email: email })
-        //     }
-        //     catch (err) {
-        //         res.status(500).json({ error: err.message });
-        //     }
-        // }
-
+        //Getting a specific user data by email 
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email
+            const filter = { email: email }
+            const result = await usersCollection.findOne(filter);
+            res.send(result);
+        })
     }
     finally {
 
