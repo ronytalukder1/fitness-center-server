@@ -63,7 +63,7 @@ async function run() {
                 return res.send({ acknowledged: false, message })
             }
 
-            //Compare passwords
+            //Comparing hash password with the password
             const isMatch = await bcrypt.compare(password, user.password);
             console.log(isMatch);
             if (!isMatch) {
